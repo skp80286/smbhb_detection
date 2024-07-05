@@ -24,7 +24,7 @@ class WWZ:
     """A class for weighted wavelet z-transform analysis."""
 
     #--------------------------------------------------------------------------
-    def __init__(self, time=None, flux=None, flux_err=0):
+    def __init__(self, time=None, flux=None, flux_err=0, verbose=True):
         """A class for weighted wavelet z-transform analysis.
 
         Parameters
@@ -46,10 +46,11 @@ class WWZ:
         can be provided with the set_data() method.
         """
 
-        print('WWZ instance created.')
+        if verbose:
+            print('WWZ instance created.')
 
         if time is not None and flux is not None:
-            self.set_data(time, flux, flux_err=flux_err)
+            self.set_data(time, flux, flux_err=flux_err, verbose=verbose)
         else:
             self._reset()
 
@@ -264,7 +265,7 @@ class WWZ:
         return freq
 
     #--------------------------------------------------------------------------
-    def get_tau(self, t_min=None, t_max=None, n_div=8, n_bins=None, dtau=None):
+    def get_tau(self, t_min=None, t_max=None, n_div=8, n_bins=None, dtau=None, verbose=True):
         """Create a range of taus (time points) for the analysis.
 
         Parameters
@@ -318,11 +319,12 @@ class WWZ:
         else:
             raise ValueError("Either n_div, n_bins, or dtau needs to be set.")
 
-        print('Linear range of tau (time points) created with')
-        print('Earliest time:         {0:10.1f}'.format(t_min))
-        print('Latest time:           {0:10.1f}'.format(t_max))
-        print('Time interval:         {0:10.1f}'.format(dtau))
-        print('Points in time:        {0:10d}\n'.format(n_bins))
+        if verbose:
+            print('Linear range of tau (time points) created with')
+            print('Earliest time:         {0:10.1f}'.format(t_min))
+            print('Latest time:           {0:10.1f}'.format(t_max))
+            print('Time interval:         {0:10.1f}'.format(dtau))
+            print('Points in time:        {0:10d}\n'.format(n_bins))
 
         return tau
 

@@ -9,6 +9,7 @@ import pandas as pd
 import time
 import math
 import sys
+from scipy.stats import binned_statistic
 
 @dataclass
 class GlsAnalysisParams:
@@ -21,11 +22,29 @@ class GlsAnalysisParams:
     period= 1000
     phase = 0
     package_to_use = 'pyastronomy'
-
+    smooth_observations = None # If not None, this indicates the number days of observations to be combined for a smooth curve
+    norm = 'chisq' # “ZK”, “Scargle”, “HorneBaliunas”, “Cumming”, “wrms”, “chisq”.
+    
     def __str__(self):
         return 'sigma={0:.2f},amplitude={1:.2f}'.format(self.sigma, self.amplitude)
 
 class GlsAnalysisRunner:
+    # Use binned_statistic to calculate mean within each bin
+    def get_smooth_curve(self, num_bins, t, mag, magerr):
+        bin_mag, bin_edges, binnumber = binned_statistic(t, mag, statistic=np.nanmean, bins=num_bins)
+        bin_magerr, bin_edges, binnumber = binned_statistic(t, magerr, statistic=np.nanmean, bins=num_bins)
+        bin_width = (bin_edges[1] - bin_edges[0])
+        bin_t = bin_edges[1:] - bin_width/2
+    
+        filter = np.isfinite(bin_mag)
+        #print(str(filter[:10]))
+        bin_mag = bin_mag[filter]
+        bin_t = bin_t[filter]
+        bin_magerr = bin_magerr[filter]
+        return (bin_t, bin_mag, bin_magerr)
+    
+#plt.scatter(bin_t, bin_mag)
+#plt.show()
     def run(self, params = GlsAnalysisParams(), num_iterations = 100):
         lcsim = LC.LightCurveSimulation()
         periods = np.arange(30, 3000, 10) 
@@ -43,12 +62,14 @@ class GlsAnalysisRunner:
             (t, mag, magerr, _, _, _) = lcsim.generate_light_curve(
                 survey=params.survey, is_binary = is_binary, tau=params.tau, 
                 sigma=params.sigma, amplitude=params.amplitude, period=period, phase=params.phase)
-            
+
+            if params.smooth_observations is not None:
+                (t, mag, magerr) = self.get_smooth_curve(params.survey.observation_period/params.smooth_observations, t, mag, magerr)
             # Perform analysis
             # Compute the GLS periodogram with default options.
             power = None
             if params.package_to_use == 'pyastronomy':            
-                clp = pyPeriod.Gls((t, mag, magerr), freq=freqs, norm='chisq') # “ZK”, “Scargle”, “HorneBaliunas”, “Cumming”, “wrms”, “chisq”.
+                clp = pyPeriod.Gls((t, mag, magerr), freq=freqs, norm=params.norm) 
                 power = clp.power
             elif params.package_to_use == 'scipy': 
                 power = sig.lombscargle(t, mag, freqs)
